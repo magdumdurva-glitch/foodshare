@@ -31,8 +31,11 @@ export const authApi = {
     method: 'POST',
     body: JSON.stringify(payload)
   }),
-  getMe: () => request('/auth/me'),
-  getDemoUsers: () => request('/auth/demo-users')
+  createUser: (payload) => request('/auth/users', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+  getMe: () => request('/auth/me')
 };
 
 export const donationsApi = {

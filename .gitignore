@@ -1,5 +1,8 @@
 node_modules/
 dist/
+server/.gradle/
+server/.kotlin/
+server/build/
 .DS_Store
 *.log
 foodshare.db-journal

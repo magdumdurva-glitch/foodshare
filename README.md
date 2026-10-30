@@ -7,15 +7,17 @@
 
 ## 🌟 Executive Summary
 
-**FoodShare** is a full-stack, real-time web and mobile-responsive food redistribution platform. It bridges the critical gap between food donors (college canteens, hostels, restaurants, and event caterers) and local NGOs/volunteer networks (such as Roti Banks and shelter homes).
+**FoodShare** is a full-stack, responsive web platform for coordinating food redistribution. It connects food donors (college canteens, hostels, restaurants, and event caterers) with local NGOs and volunteer networks (such as Roti Banks and shelter homes).
 
-By establishing a synchronized digital pipeline, edible surplus meals are claimed, collected, and distributed to communities before expiry, directly mitigating landfill methane emissions and hunger.
+The platform provides a shared workflow for listing surplus meals, arranging collection before expiry, and recording the delivery outcome. Its goal is to reduce avoidable food waste and improve coordination between donors and community organizations.
+
+See the [faculty presentation guide](PRESENTATION_GUIDE.md) for the slide outline, demo sequence, architecture notes, and viva answers.
 
 ---
 
 ## 🚀 Live Demo & Quick Start
 
-The platform is pre-configured and running locally on your workstation.
+Install JDK 21 before starting the backend; the included Gradle wrapper downloads the required Gradle version automatically. Configure a private `JWT_SECRET` before deployment. Demo seed accounts are created only when all five unique `SEED_*_PASSWORD` environment variables are set to values of at least 12 characters. Without them, users can still register donor and NGO accounts, but sample accounts are not seeded.
 
 ### Running with a Single Command:
 From the root directory (`WMD Project`):
@@ -41,10 +43,10 @@ FoodShare was engineered specifically to demonstrate core competencies from the 
 | **Frontend (React)** | React 19 functional components, reusable widgets, custom hooks | [`client/src/App.jsx`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/client/src/App.jsx) |
 | **State Management** | Context API (`AuthContext`) managing user roles, session tokens, and theme | [`client/src/context/AuthContext.jsx`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/client/src/context/AuthContext.jsx) |
 | **Styling & Responsive UI** | Custom Vanilla CSS design system, Glassmorphism, CSS variables, mobile-first | [`client/src/index.css`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/client/src/index.css) |
-| **Client-Server & REST APIs** | Express server exposing RESTful CRUD endpoints (`/api/donations`, `/api/claims`) | [`server/index.js`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/server/index.js) |
-| **Database & Persistence** | Relational SQLite database (`better-sqlite3`) with foreign keys & transaction locks | [`server/db.js`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/server/db.js) |
-| **Authentication & RBAC** | JWT (JSON Web Tokens) with 3 distinct roles: **Donor**, **NGO**, **Admin** | [`server/middleware/auth.js`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/server/middleware/auth.js) |
-| **Cross-Platform / Mobile** | Interactive **Smartphone Bezel Simulator Mode** showcasing mobile app layout | [`client/src/components/QuickDemoBar.jsx`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/client/src/components/QuickDemoBar.jsx) |
+| **Client-Server & REST APIs** | Kotlin/JVM server exposing RESTful CRUD endpoints (`/api/donations`, `/api/claims`) | [`server/src/main/kotlin/org/foodshare/Application.kt`](server/src/main/kotlin/org/foodshare/Application.kt) |
+| **Database & Persistence** | Relational SQLite database with foreign keys and transaction handling through JDBC | [`server/src/main/kotlin/org/foodshare/Application.kt`](server/src/main/kotlin/org/foodshare/Application.kt) |
+| **Authentication & RBAC** | JWT (JSON Web Tokens) with 3 distinct roles: **Donor**, **NGO**, **Admin** | [`server/src/main/kotlin/org/foodshare/Application.kt`](server/src/main/kotlin/org/foodshare/Application.kt) |
+| **Cross-Platform / Mobile** | Interactive **Smartphone Bezel Simulator Mode** showcasing mobile app layout | [`client/src/components/Navbar.jsx`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/client/src/components/Navbar.jsx) |
 | **Smart Feature (CSE AIML)** | Live expiry urgency classifier that alerts when food has &lt; 2 hours remaining | [`client/src/components/ExpiryTimer.jsx`](file:///c:/Users/Kartik%20Mahindrakar/Desktop/WMD%20Project/client/src/components/ExpiryTimer.jsx) |
 
 ---
@@ -66,7 +68,7 @@ FoodShare was engineered specifically to demonstrate core competencies from the 
                                            │
                                            ▼
                ┌────────────────────────────────────────────────────────┐
-               │              BACKEND (Node.js + Express)               │
+               │               BACKEND (Kotlin/JVM)                    │
                │  • /api/auth (Login, Register, Role Verification)      │
                │  • /api/donations (Browse, Filter, CRUD operations)    │
                │  • /api/claims (Claim batch, State transitions)        │
@@ -77,7 +79,7 @@ FoodShare was engineered specifically to demonstrate core competencies from the 
                                            │
                                            ▼
                ┌────────────────────────────────────────────────────────┐
-               │            DATABASE (SQLite3: foodshare.db)            │
+               │            DATABASE (SQLite: foodshare.db)             │
                │  • users (id, name, email, role, organization)         │
                │  • donations (id, donor_id, food_name, qty, status)    │
                │  • claims (id, donation_id, ngo_id, pickup_time)       │
@@ -99,61 +101,32 @@ with expiry window      & dispatches van       food from donor        impact cou
 
 ---
 
-## ⚡ 1-Click Viva Demo Accounts
+## 🔐 Demo Account Setup
 
-A dedicated **Viva Demo Controller** bar is embedded at the top of the app:
+Seeded accounts use private passwords supplied through environment variables: `SEED_DONOR_1_PASSWORD`, `SEED_DONOR_2_PASSWORD`, `SEED_NGO_1_PASSWORD`, `SEED_NGO_2_PASSWORD`, and `SEED_ADMIN_PASSWORD`. Do not commit these values. Public registration supports donor and NGO accounts only; signed-in admins can create accounts of any role from the User Accounts tab.
 
-| Role | Account Name | Email | Password | Primary Actions |
-|---|---|---|---|---|
-| **Donor** | Kartik Mahindrakar | `kartik@foodshare.org` | `donor123` | Post surplus food, set expiry window, track pickup |
-| **Donor** | APSIT Central Canteen | `canteen@apsit.edu.in` | `canteen123` | Post bulk breakfast/lunch leftovers |
-| **NGO** | Helping Hands Foundation | `ngo@helpinghands.org` | `ngo123` | Browse nearby food, claim batch, advance to picked up |
-| **NGO** | Roti Bank Volunteers | `rotibank@thane.org` | `roti123` | Claim bakery and dinner packs, complete distribution |
-| **Admin** | Faculty / Council Admin | `admin@foodshare.org` | `admin123` | Inspect SQLite tables, override statuses, audit logs |
+Sign in through the matching portal with the configured account password. To demonstrate different roles, sign out and authenticate with the other account; there is no account-switch shortcut.
 
----
+## 🎯 Viva Presentation Flow
 
-## 🎯 Step-by-Step Viva Presentation Script
-
-When presenting to your professors or external examiner, follow this 5-minute story:
-
-1. **Introduction & Mission:**
-   > *"Good morning professors. My WMD project is **FoodShare**, a real-time web platform designed to eliminate surplus food waste and connect canteens with local NGOs across Thane."*
-
-2. **Demonstrate Donor Flow:**
-   - Click **"Kartik (donor)"** on the top controller bar.
-   - Click **"+ Donate Food"**.
-   - Enter *"Fresh Vegetable Dum Biryani"*, quantity *25 meals*, choose the *"⏱️ 45 mins (Urgent demo)"* expiry preset.
-   - Click **"Publish Donation 🚀"**. Notice the live card appear immediately with a blinking **"Expiring Soon"** badge.
-
-3. **Demonstrate NGO Discovery & Claiming:**
-   - Click **"Helping Hands (ngo)"** on the top controller bar.
-   - Switch to **"Find Food"** tab. The Biryani batch is immediately visible.
-   - Click **"Claim Food"** ➔ Click **"Confirm Claim 🤝"**.
-   - Notice status changes instantly from **AVAILABLE** ➔ **CLAIMED**.
-
-4. **Demonstrate Pickup & Distribution:**
-   - In the NGO Portal, click **"Mark Picked Up 🚚"** (status changes to **PICKED UP**).
-   - Once handed over to the community, click **"Mark Delivered 🎉"** (status changes to **COMPLETED**).
-   - Go to the **Impact** tab: show how the *Meals Rescued*, *Kg of Food Saved*, and *CO2e Greenhouse Emissions Averted* update dynamically!
-
-5. **Demonstrate Admin & SQLite Database Oversight:**
-   - Click **"Faculty (admin)"** on the top bar.
-   - Show the **Admin Dashboard**: display the full database records, user directory, and the real-time activity log showing the exact timestamps of the donation and claim.
-   - Toggle the **"Mobile Frame"** button on the top controller to prove mobile app responsiveness and layout adaptation!
+1. Demonstrate a donor posting a food donation and setting its expiry window.
+2. Sign out, sign in as an NGO, and claim the available donation.
+3. Advance the claim through pickup and delivery, then review the impact totals.
+4. Sign in with the privately provisioned admin account to review audit and status tools.
+5. Use the mobile frame toggle to demonstrate the responsive layout.
 
 ---
 
 ## ❓ Common Viva Questions & Answers
 
-**Q1: Why did you use Node.js Express and SQLite instead of Firebase?**  
-> *"Node.js and Express allow us to build standard REST API endpoints, custom middleware for JWT authentication, and relational SQLite persistence with ACID transactions. It demonstrates the complete Client-Server paradigm required by the WMD syllabus without relying on black-box cloud services."*
+**Q1: Why did you use Kotlin and SQLite instead of Firebase?**
+> *"Kotlin lets us build a typed backend, while SQLite provides relational persistence and transactions. Together they demonstrate the complete Client-Server paradigm required by the WMD syllabus without relying on black-box cloud services."*
 
-**Q2: How is real-time status updated across users?**  
+**Q2: How is donation status updated across users?**
 > *"When an NGO claims a donation, the backend executes an atomic SQLite transaction updating both the `claims` and `donations` records, and writes an entry to `activity_logs`. The client application refetches state and transitions the lifecycle tracker instantly."*
 
 **Q3: What makes this relevant to CSE (AIML)?**  
-> *"We implemented a dynamic urgency algorithm that monitors expiration windows. If a batch is within 120 minutes of expiry, the system flags it as urgent, increases its priority in search ranking, and alerts active volunteers to prevent waste."*
+> *"The current build includes a transparent rule-based urgency classifier: available donations with between 1 and 120 minutes remaining are marked urgent and can be filtered by NGOs. It is not a trained machine-learning model; a validated predictive model could be a future extension."*
 
 **Q4: How does the application ensure mobile responsiveness?**  
 > *"The frontend uses a modern CSS token system with responsive flexbox and grid units (`clamp()`, `minmax()`), media queries, and touch-friendly interactive targets. You can inspect it directly using the 'Mobile Frame' toggle to see it formatted inside a smartphone viewport."*
@@ -173,12 +146,11 @@ WMD Project/
 │   │   ├── index.css           # Vanilla CSS design tokens & animations
 │   │   └── App.jsx             # Main router and modal coordinator
 │   └── vite.config.js          # Vite config with API proxy
-├── server/                     # Backend (Node.js + Express)
-│   ├── routes/                 # auth.js, donations.js, claims.js, stats.js
-│   ├── middleware/             # auth.js (JWT verification & Role guard)
-│   ├── db.js                   # SQLite database setup & seed data
-│   ├── foodshare.db            # SQLite database file
-│   └── index.js                # Express app entrypoint (Port 5000)
+├── server/                     # Backend (Kotlin/JVM)
+│   ├── src/main/kotlin/        # HTTP API, authentication, SQLite persistence
+│   ├── build.gradle.kts        # Kotlin and backend dependencies
+│   ├── gradlew.bat             # Gradle wrapper for Windows
+│   └── foodshare.db            # SQLite database file
 └── package.json                # Root orchestration script
 ```
 

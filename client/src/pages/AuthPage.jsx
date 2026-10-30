@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Lock, Mail, Phone, Building, MapPin, AlertCircle, ArrowRight } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
-export default function AuthPage({ onSuccess }) {
+export default function AuthPage({ onSuccess, startInRegisterMode = false }) {
   const { login, register } = useAuth();
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isLoginMode, setIsLoginMode] = useState(!startInRegisterMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,11 +35,6 @@ export default function AuthPage({ onSuccess }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoFill = (email, password) => {
-    setIsLoginMode(true);
-    setFormData({ ...formData, email, password });
   };
 
   return (
@@ -91,72 +86,6 @@ export default function AuthPage({ onSuccess }) {
           >
             <AlertCircle size={16} />
             <span>{error}</span>
-          </div>
-        )}
-
-        {/* Demo Fast Logins Box */}
-        {isLoginMode && (
-          <div
-            style={{
-              background: 'var(--bg-surface-elevated)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '8px',
-              padding: '12px',
-              marginBottom: '20px'
-            }}
-          >
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>
-              ⚡ 1-Click Fill Demo Credentials for Evaluation:
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => handleDemoFill('kartik@foodshare.org', 'donor123')}
-                style={{
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  color: 'var(--primary)',
-                  cursor: 'pointer'
-                }}
-              >
-                🍛 Kartik (Donor)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoFill('ngo@helpinghands.org', 'ngo123')}
-                style={{
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  color: '#3b82f6',
-                  cursor: 'pointer'
-                }}
-              >
-                🤝 Helping Hands (NGO)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoFill('admin@foodshare.org', 'admin123')}
-                style={{
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  color: '#f59e0b',
-                  cursor: 'pointer'
-                }}
-              >
-                ⚡ Faculty (Admin)
-              </button>
-            </div>
           </div>
         )}
 

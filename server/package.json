@@ -1,18 +1,11 @@
 {
   "name": "foodshare-server",
   "version": "1.0.0",
-  "description": "Express REST API for FoodShare WMD Project",
-  "main": "index.js",
-  "type": "module",
+  "description": "Kotlin REST API for FoodShare WMD Project",
+  "private": true,
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^13.0.3",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2"
+    "start": "start_server.bat",
+    "dev": "start_server.bat",
+    "dev:gradle": "gradlew.bat run"
   }
 }

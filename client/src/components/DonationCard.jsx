@@ -227,15 +227,21 @@ export default function DonationCard({ donation, onClaim, onViewDetails, onUpdat
             </div>
           )}
 
-          {/* ADMIN ONLY: Full Override button */}
-          {isAdmin && donation.status === 'available' && (
-            <button
-              onClick={() => onClaim(donation)}
-              className="btn btn-primary btn-sm"
-              style={{ flex: 1.2, fontSize: '0.82rem', background: '#f59e0b' }}
+          {/* ADMIN: Read-only status indicator */}
+          {isAdmin && (
+            <div
+              style={{
+                fontSize: '0.73rem',
+                fontWeight: 700,
+                color: 'var(--text-dim)',
+                background: 'var(--bg-surface-elevated)',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: '1px solid var(--border-subtle)'
+              }}
             >
-              <span>Test Claim</span>
-            </button>
+              ⚡ Admin View
+            </div>
           )}
 
         </div>

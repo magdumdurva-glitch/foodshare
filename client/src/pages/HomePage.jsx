@@ -2,20 +2,64 @@ import React, { useEffect, useState } from 'react';
 import { donationsApi, statsApi } from '../api';
 import DonationCard from '../components/DonationCard';
 import { 
-  Utensils, 
   ArrowRight, 
   Sparkles, 
-  ShieldCheck, 
-  HeartHandshake, 
-  Award,
   ChevronRight,
   Package,
-  Layers
+  HeartHandshake,
+  ShieldCheck,
+  PlusCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+// Role-specific hero content
+const ROLE_HERO = {
+  donor: {
+    emoji: '🍛',
+    greeting: 'Your Donor Dashboard Overview',
+    tagline: 'DONOR PORTAL',
+    taglineColor: '#10b981',
+    taglineBg: 'rgba(16, 185, 129, 0.12)',
+    taglineBorder: 'rgba(16, 185, 129, 0.3)',
+    heroBg: 'radial-gradient(ellipse at top, rgba(16, 185, 129, 0.15) 0%, rgba(11, 15, 25, 0) 70%)',
+    description: 'Post surplus food from your canteen or event and watch it reach families in need.',
+    ctaLabel: 'Post a New Food Donation',
+    ctaIcon: <PlusCircle size={16} />,
+    ctaGradient: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+    ctaTab: 'donor_dashboard'
+  },
+  ngo: {
+    emoji: '🤝',
+    greeting: 'NGO Volunteer Command Center',
+    tagline: 'NGO PORTAL',
+    taglineColor: '#3b82f6',
+    taglineBg: 'rgba(59, 130, 246, 0.12)',
+    taglineBorder: 'rgba(59, 130, 246, 0.3)',
+    heroBg: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.12) 0%, rgba(11, 15, 25, 0) 70%)',
+    description: 'Explore fresh food batches across Thane, claim them, and coordinate delivery to shelters.',
+    ctaLabel: 'Browse Available Food',
+    ctaIcon: <HeartHandshake size={16} />,
+    ctaGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    ctaTab: 'explore'
+  },
+  admin: {
+    emoji: '⚡',
+    greeting: 'Admin & Faculty Oversight Hub',
+    tagline: 'ADMIN CONSOLE',
+    taglineColor: '#f59e0b',
+    taglineBg: 'rgba(245, 158, 11, 0.12)',
+    taglineBorder: 'rgba(245, 158, 11, 0.3)',
+    heroBg: 'radial-gradient(ellipse at top, rgba(245, 158, 11, 0.12) 0%, rgba(11, 15, 25, 0) 70%)',
+    description: 'Full system oversight: inspect the SQLite database, audit all activity logs, and override statuses.',
+    ctaLabel: 'Open Admin Console',
+    ctaIcon: <ShieldCheck size={16} />,
+    ctaGradient: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+    ctaTab: 'admin_dashboard'
+  }
+};
+
 export default function HomePage({ onOpenAddDonation, onViewDetails, onClaim, onUpdateStatus, setActiveTab }) {
-  const { user, quickSwitch, demoUsers } = useAuth();
+  const { user } = useAuth();
   const [recentDonations, setRecentDonations] = useState([]);
   const [impactStats, setImpactStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,27 +80,27 @@ export default function HomePage({ onOpenAddDonation, onViewDetails, onClaim, on
         setLoading(false);
       }
     }
-
     loadData();
   }, []);
 
-  const handleEnterPortal = (roleName) => {
-    const demoUser = demoUsers.find((u) => u.role === roleName);
-    if (demoUser) {
-      quickSwitch(demoUser);
+  const hero = user ? ROLE_HERO[user.role] : null;
+
+  const handleHeroCta = () => {
+    if (!hero) return;
+    if (hero.ctaTab === 'donor_dashboard' && onOpenAddDonation) {
+      onOpenAddDonation();
+    } else {
+      setActiveTab(hero.ctaTab);
     }
-    if (roleName === 'donor') setActiveTab('donor_dashboard');
-    else if (roleName === 'ngo') setActiveTab('ngo_dashboard');
-    else if (roleName === 'admin') setActiveTab('admin_dashboard');
   };
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 20px 60px' }}>
       
-      {/* Hero Section */}
+      {/* Hero Section — role-aware */}
       <section
         style={{
-          background: 'radial-gradient(ellipse at top, rgba(16, 185, 129, 0.15) 0%, rgba(11, 15, 25, 0) 70%)',
+          background: hero?.heroBg || 'radial-gradient(ellipse at top, rgba(16, 185, 129, 0.15) 0%, rgba(11, 15, 25, 0) 70%)',
           borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--border-subtle)',
           padding: '50px 24px 40px',
@@ -66,162 +110,103 @@ export default function HomePage({ onOpenAddDonation, onViewDetails, onClaim, on
           marginBottom: '32px'
         }}
       >
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '5px 14px', borderRadius: '20px', color: '#10b981', fontSize: '0.8rem', fontWeight: 700, marginBottom: '16px' }}>
-          <Sparkles size={14} />
-          <span>Real-time Surplus Food Rescue Platform</span>
-        </div>
+        {hero && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: hero.taglineBg,
+              border: `1px solid ${hero.taglineBorder}`,
+              padding: '5px 14px',
+              borderRadius: '20px',
+              color: hero.taglineColor,
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              marginBottom: '16px',
+              letterSpacing: '0.05em'
+            }}
+          >
+            <Sparkles size={13} />
+            <span>{hero.tagline}</span>
+          </div>
+        )}
 
         <h1
           style={{
-            fontSize: 'clamp(2rem, 4.5vw, 3.2rem)',
-            fontWeight: 800,
+            fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
+            fontWeight: 900,
             letterSpacing: '-0.03em',
-            marginBottom: '14px',
+            marginBottom: '12px',
             lineHeight: 1.15
           }}
         >
-          Don’t Waste Surplus Food. <br />
-          <span style={{ background: 'linear-gradient(135deg, #10b981 0%, #34d399 50%, #3b82f6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Share It Instantly.
-          </span>
+          {hero ? (
+            <>
+              {hero.greeting}
+            </>
+          ) : (
+            <>
+              Don&apos;t Waste Surplus Food. <br />
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #34d399 50%, #3b82f6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                Share It Instantly.
+              </span>
+            </>
+          )}
         </h1>
 
         <p
           style={{
-            fontSize: '1.05rem',
+            fontSize: '1rem',
             color: 'var(--text-muted)',
-            maxWidth: '650px',
+            maxWidth: '580px',
             margin: '0 auto 28px',
             lineHeight: 1.6
           }}
         >
-          FoodShare segregates operations into dedicated workspaces for Food Donors,
-          verified NGO collection teams, and Faculty/Admin supervisors.
+          {hero
+            ? hero.description
+            : 'FoodShare connects food donors with NGO volunteers to rescue surplus meals and deliver them to communities in Thane.'}
         </p>
 
-        {/* 3 Dedicated Segregated Portal Gateway Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '16px',
-            textAlign: 'left',
-            marginTop: '10px'
-          }}
-        >
-          {/* 1. Donor Gateway */}
-          <div
-            className="glass-panel"
+        {/* Hero CTA — role-specific */}
+        {hero && (
+          <button
+            onClick={handleHeroCta}
             style={{
-              padding: '22px',
-              borderTop: '4px solid #10b981',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              background: user?.role === 'donor' ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-surface)'
+              padding: '13px 28px',
+              borderRadius: '10px',
+              background: hero.ctaGradient,
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+              border: 'none',
+              cursor: 'pointer'
             }}
           >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '1.5rem' }}>🍛</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '2px 8px', borderRadius: '4px' }}>
-                  DONOR
-                </span>
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '6px' }}>Food Donor Portal</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '16px' }}>
-                Post excess meals from canteens or events, set safe expiry timers, and monitor when volunteers arrive.
-              </p>
-            </div>
-
-            <button
-              onClick={() => handleEnterPortal('donor')}
-              className="btn btn-primary"
-              style={{ width: '100%', fontSize: '0.85rem' }}
-            >
-              <span>{user?.role === 'donor' ? 'Go to My Dashboard' : 'Open Donor Portal'}</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-
-          {/* 2. NGO Gateway */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '22px',
-              borderTop: '4px solid #3b82f6',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              background: user?.role === 'ngo' ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-surface)'
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '1.5rem' }}>🤝</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', padding: '2px 8px', borderRadius: '4px' }}>
-                  NGO & SHELTER
-                </span>
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '6px' }}>NGO Volunteer Portal</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '16px' }}>
-                Explore fresh food batches across Thane, lock 1-click claims, dispatch vehicles, and confirm distribution.
-              </p>
-            </div>
-
-            <button
-              onClick={() => handleEnterPortal('ngo')}
-              className="btn btn-primary"
-              style={{ width: '100%', fontSize: '0.85rem', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}
-            >
-              <span>{user?.role === 'ngo' ? 'Go to My Claims' : 'Open NGO Portal'}</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-
-          {/* 3. Admin Gateway */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '22px',
-              borderTop: '4px solid #f59e0b',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              background: user?.role === 'admin' ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-surface)'
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '1.5rem' }}>⚡</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '2px 8px', borderRadius: '4px' }}>
-                  ADMIN
-                </span>
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '6px' }}>Admin & Faculty Console</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '16px' }}>
-                Review live SQLite tables, manage user roles, audit real-time activity logs, and override batch statuses.
-              </p>
-            </div>
-
-            <button
-              onClick={() => handleEnterPortal('admin')}
-              className="btn btn-accent"
-              style={{ width: '100%', fontSize: '0.85rem' }}
-            >
-              <span>{user?.role === 'admin' ? 'Open Admin Console' : 'Open Admin Console'}</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
+            {hero.ctaIcon}
+            <span>{hero.ctaLabel}</span>
+            <ArrowRight size={16} />
+          </button>
+        )}
       </section>
 
-      {/* Live Impact Counters Section */}
+      {/* Live Impact Counters */}
       <section style={{ marginBottom: '40px' }}>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '16px'
           }}
         >
@@ -263,7 +248,7 @@ export default function HomePage({ onOpenAddDonation, onViewDetails, onClaim, on
         </div>
       </section>
 
-      {/* Live Rescue Feed Preview */}
+      {/* Live Rescue Feed Preview — visible to all roles */}
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
           <div>
@@ -280,24 +265,48 @@ export default function HomePage({ onOpenAddDonation, onViewDetails, onClaim, on
               />
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem' }}>
-              Active surplus food batches awaiting collection across Thane
+              {user?.role === 'ngo'
+                ? 'Fresh food batches available for claiming across Thane'
+                : user?.role === 'donor'
+                ? 'Your recent community food listings — and what others have shared'
+                : 'Active surplus food batches awaiting collection across Thane'}
             </p>
           </div>
 
-          <button
-            onClick={() => setActiveTab('explore')}
-            style={{
-              color: 'var(--primary)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <span>Explore All</span>
-            <ChevronRight size={15} />
-          </button>
+          {/* NGOs can explore all — others see their own context */}
+          {user?.role === 'ngo' && (
+            <button
+              onClick={() => setActiveTab('explore')}
+              style={{
+                color: '#3b82f6',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>Browse All Available</span>
+              <ChevronRight size={15} />
+            </button>
+          )}
+
+          {user?.role === 'donor' && (
+            <button
+              onClick={() => setActiveTab('donor_dashboard')}
+              style={{
+                color: '#10b981',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>View My Donations</span>
+              <ChevronRight size={15} />
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -310,9 +319,9 @@ export default function HomePage({ onOpenAddDonation, onViewDetails, onClaim, on
               <DonationCard
                 key={donation.id}
                 donation={donation}
-                onClaim={onClaim}
+                onClaim={user?.role === 'ngo' ? onClaim : null}
                 onViewDetails={onViewDetails}
-                onUpdateStatus={onUpdateStatus}
+                onUpdateStatus={user?.role === 'ngo' || user?.role === 'admin' ? onUpdateStatus : null}
               />
             ))}
           </div>

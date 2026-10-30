@@ -1,26 +1,25 @@
 import express from 'express';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
-import { signToken, authMiddleware } from '../middleware/auth.js';
+import { signToken, authMiddleware, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET /api/auth/demo-users - Quick accounts for 1-click viva/demo
-router.get('/demo-users', (req, res) => {
-  const users = db.prepare('SELECT id, name, email, role, organization, location FROM users').all();
-  res.json({ users });
-});
-
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, email, password, role, phone, organization, location } = req.body;
 
   if (!name || !email || !password || !role) {
     return res.status(400).json({ error: 'Name, email, password, and role are required' });
   }
 
-  if (!['donor', 'ngo', 'admin'].includes(role)) {
-    return res.status(400).json({ error: 'Role must be donor, ngo, or admin' });
+  if (!['donor', 'ngo'].includes(role)) {
+    return res.status(400).json({ error: 'Public registration is limited to donor and ngo accounts' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
 
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
@@ -30,6 +29,7 @@ router.post('/register', (req, res) => {
 
   const id = `usr-${crypto.randomUUID()}`;
   const normalizedEmail = email.toLowerCase().trim();
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   db.prepare(`
     INSERT INTO users (id, name, email, password, role, phone, organization, location)
@@ -38,7 +38,7 @@ router.post('/register', (req, res) => {
     id,
     name.trim(),
     normalizedEmail,
-    password, // For demo simplicity; could also hash
+    hashedPassword,
     role,
     phone || '',
     organization || (role === 'donor' ? 'Individual Donor' : 'Community Volunteer'),
@@ -55,8 +55,51 @@ router.post('/register', (req, res) => {
   });
 });
 
+// POST /api/auth/users - Admin-only account creation
+router.post('/users', authMiddleware, requireRole('admin'), async (req, res) => {
+  const { name, email, password, role, phone, organization, location } = req.body;
+
+  if (!name || !email || !password || !role) {
+    return res.status(400).json({ error: 'Name, email, password, and role are required' });
+  }
+
+  if (!['donor', 'ngo', 'admin'].includes(role)) {
+    return res.status(400).json({ error: 'Role must be donor, ngo, or admin' });
+  }
+
+  if (password.length < 12) {
+    return res.status(400).json({ error: 'Admin-created account passwords must be at least 12 characters' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(normalizedEmail);
+  if (existing) {
+    return res.status(409).json({ error: 'An account with this email already exists' });
+  }
+
+  const id = `usr-${crypto.randomUUID()}`;
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  db.prepare(`
+    INSERT INTO users (id, name, email, password, role, phone, organization, location)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    name.trim(),
+    normalizedEmail,
+    hashedPassword,
+    role,
+    phone || '',
+    organization || (role === 'donor' ? 'Individual Donor' : 'Community Volunteer'),
+    location || 'Thane, Maharashtra'
+  );
+
+  const user = db.prepare('SELECT id, name, email, role, phone, organization, location FROM users WHERE id = ?').get(id);
+  res.status(201).json({ message: 'Account created successfully', user });
+});
+
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -69,7 +112,13 @@ router.post('/login', (req, res) => {
     WHERE email = ?
   `).get(email.toLowerCase().trim());
 
-  if (!user || user.password !== password) {
+  if (!user) {
+    // Return same error message to prevent email enumeration
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+  if (!passwordMatch) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
@@ -91,7 +140,7 @@ router.post('/login', (req, res) => {
   });
 });
 
-// GET /api/auth/me
+// GET /api/auth/me  — requires valid JWT
 router.get('/me', authMiddleware, (req, res) => {
   const user = db.prepare(`
     SELECT id, name, email, role, phone, organization, location, created_at 

@@ -1,6 +1,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,70 +71,92 @@ export function initDatabase() {
 }
 
 function seedDatabase() {
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  if (userCount > 0) return;
+  rotateLegacySeedPasswords();
 
-  console.log('Seeding initial FoodShare demo data...');
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+  const donationCount = db.prepare('SELECT COUNT(*) as count FROM donations').get().count;
+  const logCount = db.prepare('SELECT COUNT(*) as count FROM activity_logs').get().count;
+
+  if (userCount > 0 && donationCount > 0 && logCount > 0) return;
+
+  const seedPasswords = {
+    donor1: process.env.SEED_DONOR_1_PASSWORD,
+    donor2: process.env.SEED_DONOR_2_PASSWORD,
+    ngo1: process.env.SEED_NGO_1_PASSWORD,
+    ngo2: process.env.SEED_NGO_2_PASSWORD,
+    admin: process.env.SEED_ADMIN_PASSWORD
+  };
+
+  if (Object.values(seedPasswords).some((password) => !password || password.length < 12)) {
+    console.warn('Demo data seeding skipped. Configure all five SEED_*_PASSWORD values (12+ characters) to enable it.');
+    return;
+  }
+
+  console.log('Seeding initial FoodShare demo data (with hashed passwords)...');
+
+  const SALT_ROUNDS = 10;
 
   const insertUser = db.prepare(`
     INSERT INTO users (id, name, email, password, role, phone, organization, location)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  insertUser.run(
-    'usr-donor-1',
-    'Kartik Mahindrakar',
-    'kartik@foodshare.org',
-    'donor123',
-    'donor',
-    '+91 98765 43210',
-    'Green Campus Cafe',
-    'Thane West, Maharashtra'
-  );
+  if (userCount === 0) {
+    insertUser.run(
+      'usr-donor-1',
+      'Kartik Mahindrakar',
+      'donor@foodshare.org',
+      bcrypt.hashSync(seedPasswords.donor1, SALT_ROUNDS),
+      'donor',
+      '+91 98765 43210',
+      'Green Campus Cafe',
+      'Thane West, Maharashtra'
+    );
 
-  insertUser.run(
-    'usr-donor-2',
-    'APSIT Central Canteen',
-    'canteen@apsit.edu.in',
-    'canteen123',
-    'donor',
-    '+91 98220 11223',
-    'A.P. Shah Institute of Technology',
-    'Kasarvadavali, Ghodbunder Rd, Thane'
-  );
+    insertUser.run(
+      'usr-donor-2',
+      'APSIT Central Canteen',
+      'canteen@foodshare.org',
+      bcrypt.hashSync(seedPasswords.donor2, SALT_ROUNDS),
+      'donor',
+      '+91 98220 11223',
+      'A.P. Shah Institute of Technology',
+      'Kasarvadavali, Ghodbunder Rd, Thane'
+    );
 
-  insertUser.run(
-    'usr-ngo-1',
-    'Helping Hands Foundation',
-    'ngo@helpinghands.org',
-    'ngo123',
-    'ngo',
-    '+91 91234 56789',
-    'Helping Hands NGO',
-    'Thane & Navi Mumbai'
-  );
+    insertUser.run(
+      'usr-ngo-1',
+      'Helping Hands Foundation',
+      'ngo@foodshare.org',
+      bcrypt.hashSync(seedPasswords.ngo1, SALT_ROUNDS),
+      'ngo',
+      '+91 91234 56789',
+      'Helping Hands NGO',
+      'Thane & Navi Mumbai'
+    );
 
-  insertUser.run(
-    'usr-ngo-2',
-    'Roti Bank Volunteers',
-    'rotibank@thane.org',
-    'roti123',
-    'ngo',
-    '+91 99887 76655',
-    'Roti Bank Youth Wing',
-    'Mulund & Thane East'
-  );
+    insertUser.run(
+      'usr-ngo-2',
+      'Roti Bank Volunteers',
+      'roti@foodshare.org',
+      bcrypt.hashSync(seedPasswords.ngo2, SALT_ROUNDS),
+      'ngo',
+      '+91 99887 76655',
+      'Roti Bank Youth Wing',
+      'Mulund & Thane East'
+    );
 
-  insertUser.run(
-    'usr-admin-1',
-    'WMD Project Admin / Faculty',
-    'admin@foodshare.org',
-    'admin123',
-    'admin',
-    '+91 90000 00001',
-    'FoodShare Central Council',
-    'Mumbai Metropolitan Region'
-  );
+    insertUser.run(
+      'usr-admin-1',
+      'WMD Project Admin / Faculty',
+      'admin@foodshare.org',
+      bcrypt.hashSync(seedPasswords.admin, SALT_ROUNDS),
+      'admin',
+      '+91 90000 00001',
+      'FoodShare Central Council',
+      'Mumbai Metropolitan Region'
+    );
+  }
 
   // Seed Donations
   const now = new Date();
@@ -156,7 +180,7 @@ function seedDatabase() {
     'Thane West',
     'Green Campus Cafe, Near Ghodbunder Road, Thane',
     minusHours(1),
-    plusMinutes(45), // 45 minutes left -> Smart Urgency Badge!
+    plusMinutes(45),
     'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&auto=format&fit=crop&q=80',
     'available',
     minusHours(1)
@@ -269,5 +293,49 @@ function seedDatabase() {
   insertLog.run('log-2', 'don-104', 'usr-ngo-1', 'DONATION_CLAIMED', 'Helping Hands Foundation claimed Idli Sambhar combo', minusHours(1.5));
   insertLog.run('log-3', 'don-105', 'usr-ngo-2', 'DONATION_COMPLETED', '40 fruit boxes collected and handed over', minusHours(18));
 
-  console.log('Database seeded successfully with users, donations, claims, and logs.');
+  console.log('Database seeded successfully with bcrypt-hashed passwords.');
+}
+
+function rotateLegacySeedPasswords() {
+  const accounts = [
+    { id: 'usr-donor-1', email: 'donor@foodshare.org', envName: 'SEED_DONOR_1_PASSWORD', legacyPassword: 'donor123' },
+    { id: 'usr-donor-2', email: 'canteen@foodshare.org', envName: 'SEED_DONOR_2_PASSWORD', legacyPassword: 'canteen123' },
+    { id: 'usr-ngo-1', email: 'ngo@foodshare.org', envName: 'SEED_NGO_1_PASSWORD', legacyPassword: 'ngo123' },
+    { id: 'usr-ngo-2', email: 'roti@foodshare.org', envName: 'SEED_NGO_2_PASSWORD', legacyPassword: 'roti123' },
+    { id: 'usr-admin-1', email: 'admin@foodshare.org', envName: 'SEED_ADMIN_PASSWORD', legacyPassword: 'admin123' }
+  ];
+
+  const getUser = db.prepare('SELECT email, password FROM users WHERE id = ?');
+  const getUserByEmail = db.prepare('SELECT id FROM users WHERE email = ?');
+  const updateEmail = db.prepare('UPDATE users SET email = ? WHERE id = ?');
+  const updatePassword = db.prepare('UPDATE users SET password = ? WHERE id = ?');
+
+  for (const account of accounts) {
+    const user = getUser.get(account.id);
+    if (!user) continue;
+
+    const emailOwner = getUserByEmail.get(account.email);
+    if (user.email !== account.email && (!emailOwner || emailOwner.id === account.id)) {
+      updateEmail.run(account.email, account.id);
+    }
+
+    const configuredPassword = process.env[account.envName];
+    const legacyPasswordMatches = user.password === account.legacyPassword ||
+      (() => {
+        try {
+          return bcrypt.compareSync(account.legacyPassword, user.password);
+        } catch {
+          return false;
+        }
+      })();
+    const replacementPassword = configuredPassword && configuredPassword.length >= 12
+      ? configuredPassword
+      : legacyPasswordMatches
+        ? crypto.randomBytes(32).toString('hex')
+        : null;
+
+    if (replacementPassword) {
+      updatePassword.run(bcrypt.hashSync(replacementPassword, 10), account.id);
+    }
+  }
 }

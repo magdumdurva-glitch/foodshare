@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { statsApi, donationsApi } from '../api';
+import { authApi, statsApi, donationsApi } from '../api';
 import StatusBadge from '../components/StatusBadge';
 import { 
   ShieldCheck, 
@@ -7,6 +7,7 @@ import {
   Package, 
   Activity, 
   Trash2, 
+  UserPlus,
   RefreshCw, 
   CheckCircle2, 
   BarChart, 
@@ -20,6 +21,9 @@ export default function AdminDashboard({ onViewDetails }) {
   const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('donations'); // 'donations' | 'users' | 'logs'
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'donor' });
+  const [createMessage, setCreateMessage] = useState('');
+  const [createError, setCreateError] = useState('');
 
   const fetchAdminData = async () => {
     try {
@@ -53,6 +57,20 @@ export default function AdminDashboard({ onViewDetails }) {
       fetchAdminData();
     } catch (err) {
       alert(err.message || 'Failed to delete donation');
+    }
+  };
+
+  const handleCreateUser = async (event) => {
+    event.preventDefault();
+    setCreateMessage('');
+    setCreateError('');
+    try {
+      const result = await authApi.createUser(newUser);
+      setCreateMessage(`Created ${result.user.role} account for ${result.user.email}.`);
+      setNewUser({ name: '', email: '', password: '', role: 'donor' });
+      await fetchAdminData();
+    } catch (err) {
+      setCreateError(err.message || 'Failed to create account.');
     }
   };
 
@@ -287,6 +305,58 @@ export default function AdminDashboard({ onViewDetails }) {
 
       {/* Tab 2: Users Management */}
       {activeTab === 'users' && (
+        <>
+        <form onSubmit={handleCreateUser} className="glass-panel" style={{ padding: '18px', marginBottom: '16px' }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: '1rem' }}>Create account</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <input
+              className="form-input"
+              aria-label="Full name"
+              placeholder="Full name"
+              value={newUser.name}
+              onChange={(event) => setNewUser({ ...newUser, name: event.target.value })}
+              required
+            />
+            <input
+              className="form-input"
+              type="email"
+              aria-label="Email address"
+              placeholder="Email address"
+              value={newUser.email}
+              onChange={(event) => setNewUser({ ...newUser, email: event.target.value })}
+              required
+            />
+            <input
+              className="form-input"
+              type="password"
+              aria-label="Temporary password"
+              placeholder="Password (12+ characters)"
+              value={newUser.password}
+              onChange={(event) => setNewUser({ ...newUser, password: event.target.value })}
+              minLength={12}
+              required
+            />
+            <select
+              className="form-input"
+              aria-label="Account role"
+              value={newUser.role}
+              onChange={(event) => setNewUser({ ...newUser, role: event.target.value })}
+            >
+              <option value="donor">Donor</option>
+              <option value="ngo">NGO</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          {(createMessage || createError) && (
+            <p role="status" style={{ color: createError ? '#f87171' : 'var(--primary)', margin: '12px 0 0', fontSize: '0.84rem' }}>
+              {createError || createMessage}
+            </p>
+          )}
+          <button type="submit" className="btn btn-primary btn-sm" style={{ marginTop: '12px' }}>
+            <UserPlus size={14} />
+            <span>Create account</span>
+          </button>
+        </form>
         <div className="glass-panel" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
             <thead>
@@ -327,6 +397,7 @@ export default function AdminDashboard({ onViewDetails }) {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Tab 3: System Logs */}

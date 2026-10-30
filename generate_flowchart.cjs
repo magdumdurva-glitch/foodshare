@@ -1,0 +1,911 @@
+const puppeteer = require('puppeteer-core');
+const fs = require('fs');
+const path = require('path');
+
+const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FoodShare – System Workflow Flowchart</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: #ffffff;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .canvas {
+    width: 1420px;
+    background: #ffffff;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0 30px 0;
+  }
+
+  /* Header banner */
+  .header-banner {
+    background: #3730a3;
+    background: linear-gradient(135deg, #3730a3 0%, #4338ca 50%, #312e81 100%);
+    color: #ffffff;
+    padding: 14px 60px;
+    border-radius: 40px;
+    text-align: center;
+    box-shadow: 0 10px 25px -5px rgba(55, 48, 163, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 2;
+  }
+
+  .header-banner h1 {
+    font-size: 27px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+
+  .header-banner p {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #c7d2fe;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Connector arrows */
+  .arrow-down {
+    width: 2px;
+    height: 32px;
+    background: #475569;
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .arrow-down::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: -4px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #475569;
+  }
+
+  /* Start Pill */
+  .start-pill {
+    background: #ede9fe;
+    border: 2px solid #8b5cf6;
+    color: #5b21b6;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 8px 46px;
+    border-radius: 28px;
+    box-shadow: 0 3px 10px rgba(139, 92, 246, 0.15);
+    z-index: 2;
+  }
+
+  /* User Access Box */
+  .action-box {
+    width: 440px;
+    background: #f0f9ff;
+    border: 2px solid #38bdf8;
+    border-radius: 14px;
+    padding: 12px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.14);
+    z-index: 2;
+  }
+
+  .box-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .user-access-icon {
+    background: #0284c7;
+    color: #ffffff;
+  }
+
+  .box-content h3 {
+    font-size: 17px;
+    font-weight: 750;
+    color: #0369a1;
+    margin-bottom: 2px;
+  }
+
+  .box-content p {
+    font-size: 13px;
+    color: #0284c7;
+    font-weight: 500;
+  }
+
+  /* Decision Row (Rhombus + Create Account) */
+  .decision-container {
+    width: 1420px;
+    position: relative;
+    height: 90px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .diamond {
+    width: 190px;
+    height: 64px;
+    background: #fff7ed;
+    border: 2px solid #f97316;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+    z-index: 2;
+  }
+
+  .diamond-text {
+    font-size: 15px;
+    font-weight: 800;
+    color: #c2410c;
+    text-align: center;
+  }
+
+  /* Create Account Box */
+  .create-account-box {
+    position: absolute;
+    left: 920px;
+    width: 290px;
+    background: #ecfdf5;
+    border: 2px solid #34d399;
+    border-radius: 14px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 4px 12px rgba(52, 211, 153, 0.15);
+    z-index: 2;
+  }
+
+  .create-account-icon {
+    background: #059669;
+    color: #ffffff;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .create-account-content h4 {
+    font-size: 15.5px;
+    font-weight: 750;
+    color: #065f46;
+  }
+
+  .create-account-content p {
+    font-size: 12px;
+    color: #047857;
+    font-weight: 500;
+  }
+
+  /* Decision SVG routing lines */
+  .decision-svg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1420px;
+    height: 160px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .label-new-user {
+    position: absolute;
+    left: 825px;
+    top: 34px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #475569;
+    background: #ffffff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    z-index: 3;
+  }
+
+  .label-existing-user {
+    position: absolute;
+    left: 720px;
+    top: 100px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #475569;
+    background: #ffffff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    z-index: 3;
+  }
+
+  /* Dashboard Box */
+  .dashboard-box {
+    width: 480px;
+    background: #f5f3ff;
+    border: 2px solid #8b5cf6;
+    border-radius: 14px;
+    padding: 12px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.14);
+    z-index: 2;
+    margin-top: 28px;
+  }
+
+  .dashboard-icon {
+    background: #7c3aed;
+    color: #ffffff;
+  }
+
+  /* Access Features Box */
+  .features-access-box {
+    width: 500px;
+    background: #eff6ff;
+    border: 2px solid #60a5fa;
+    border-radius: 14px;
+    padding: 12px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.14);
+    z-index: 2;
+  }
+
+  .features-access-icon {
+    background: #2563eb;
+    color: #ffffff;
+  }
+
+  /* Distribution Tree SVG */
+  .distribution-svg {
+    width: 1420px;
+    height: 44px;
+    margin-top: -2px;
+    margin-bottom: -2px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Cards Grid */
+  .cards-grid {
+    display: flex;
+    gap: 15px;
+    width: 1364px;
+    margin: 0 auto;
+    z-index: 2;
+  }
+
+  /* Individual Feature Cards */
+  .module-card {
+    width: 182px;
+    border-radius: 14px;
+    padding: 14px 12px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border-width: 2px;
+    border-style: solid;
+  }
+
+  .module-icon-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  .module-title {
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    letter-spacing: -0.2px;
+    line-height: 1.25;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .module-bullets {
+    list-style: none;
+    text-align: left;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-top: 4px;
+    border-top: 1px dashed rgba(0,0,0,0.1);
+  }
+
+  .module-bullets li {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .bullet-dot {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+
+  /* 7 Cards Color Schemes matching reference */
+  /* Card 1: Pink/Rose */
+  .card-donor {
+    background: #ffe4e6;
+    border-color: #fb7185;
+  }
+  .card-donor .module-icon-wrap { background: #f43f5e; color: #fff; }
+  .card-donor .module-title { color: #be123c; }
+  .card-donor .module-bullets li { color: #9f1239; }
+  .card-donor .bullet-dot { background: #e11d48; }
+
+  /* Card 2: Sky Blue */
+  .card-ngo {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+  }
+  .card-ngo .module-icon-wrap { background: #0284c7; color: #fff; }
+  .card-ngo .module-title { color: #0369a1; }
+  .card-ngo .module-bullets li { color: #075985; }
+  .card-ngo .bullet-dot { background: #0284c7; }
+
+  /* Card 3: Green / Emerald */
+  .card-urgency {
+    background: #dcfce7;
+    border-color: #4ade80;
+  }
+  .card-urgency .module-icon-wrap { background: #16a34a; color: #fff; }
+  .card-urgency .module-title { color: #15803d; }
+  .card-urgency .module-bullets li { color: #166534; }
+  .card-urgency .bullet-dot { background: #16a34a; }
+
+  /* Card 4: Yellow / Gold */
+  .card-lifecycle {
+    background: #fef9c3;
+    border-color: #facc15;
+  }
+  .card-lifecycle .module-icon-wrap { background: #ca8a04; color: #fff; }
+  .card-lifecycle .module-title { color: #a16207; }
+  .card-lifecycle .module-bullets li { color: #854d0e; }
+  .card-lifecycle .bullet-dot { background: #ca8a04; }
+
+  /* Card 5: Purple / Violet */
+  .card-admin {
+    background: #f3e8ff;
+    border-color: #c084fc;
+  }
+  .card-admin .module-icon-wrap { background: #9333ea; color: #fff; }
+  .card-admin .module-title { color: #7e22ce; }
+  .card-admin .module-bullets li { color: #6b21a8; }
+  .card-admin .bullet-dot { background: #9333ea; }
+
+  /* Card 6: Teal / Cyan */
+  .card-analytics {
+    background: #ccfbf1;
+    border-color: #2dd4bf;
+  }
+  .card-analytics .module-icon-wrap { background: #0d9488; color: #fff; }
+  .card-analytics .module-title { color: #0f766e; }
+  .card-analytics .module-bullets li { color: #115e59; }
+  .card-analytics .bullet-dot { background: #0d9488; }
+
+  /* Card 7: Fuchsia / Magenta */
+  .card-backend {
+    background: #fce7f3;
+    border-color: #f472b6;
+  }
+  .card-backend .module-icon-wrap { background: #db2777; color: #fff; }
+  .card-backend .module-title { color: #be185d; }
+  .card-backend .module-bullets li { color: #9d174d; }
+  .card-backend .bullet-dot { background: #db2777; }
+
+  /* Convergence SVG */
+  .convergence-svg {
+    width: 1420px;
+    height: 44px;
+    margin-top: -2px;
+    margin-bottom: -2px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Data Storage Box */
+  .storage-box {
+    width: 680px;
+    background: #ede9fe;
+    border: 2px solid #8b5cf6;
+    border-radius: 16px;
+    padding: 12px 26px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.16);
+    z-index: 2;
+  }
+
+  .storage-icon {
+    background: #6d28d9;
+    color: #ffffff;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .storage-content h3 {
+    font-size: 17px;
+    font-weight: 750;
+    color: #4c1d95;
+    margin-bottom: 2px;
+  }
+
+  .storage-content p {
+    font-size: 13px;
+    color: #5b21b6;
+    font-weight: 500;
+  }
+
+  .storage-content .storage-sub {
+    font-size: 11.5px;
+    color: #7c3aed;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  /* End Pill */
+  .end-pill {
+    background: #ecfdf5;
+    border: 2px solid #10b981;
+    border-radius: 36px;
+    padding: 10px 42px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.16);
+    z-index: 2;
+  }
+
+  .end-icon {
+    background: #059669;
+    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .end-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .end-content h3 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #065f46;
+  }
+
+  .end-content p {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #047857;
+  }
+
+  svg.icon {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>
+</head>
+<body>
+
+<div class="canvas">
+
+  <!-- Header Banner -->
+  <div class="header-banner">
+    <h1>FoodShare – System Workflow</h1>
+    <p>Rescue &bull; Redistribute &bull; Nourish</p>
+  </div>
+
+  <div class="arrow-down"></div>
+
+  <!-- Start Node -->
+  <div class="start-pill">Start</div>
+
+  <div class="arrow-down"></div>
+
+  <!-- User Access Node -->
+  <div class="action-box">
+    <div class="box-icon user-access-icon">
+      <svg class="icon" viewBox="0 0 24 24">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    </div>
+    <div class="box-content">
+      <h3>User Access</h3>
+      <p>Open the web application in browser or mobile viewport</p>
+    </div>
+  </div>
+
+  <div class="arrow-down"></div>
+
+  <!-- Decision Container (Login/Sign Up + Create Account) -->
+  <div class="decision-container">
+
+    <!-- Diamond -->
+    <div class="diamond">
+      <span class="diamond-text">Login / Sign Up</span>
+    </div>
+
+    <!-- Create Account Box on the right -->
+    <div class="create-account-box">
+      <div class="create-account-icon">
+        <svg class="icon" viewBox="0 0 24 24" style="width: 19px; height: 19px;">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="8.5" cy="7" r="4"></circle>
+          <line x1="20" y1="8" x2="20" y2="14"></line>
+          <line x1="23" y1="11" x2="17" y2="11"></line>
+        </svg>
+      </div>
+      <div class="create-account-content">
+        <h4>Create Account</h4>
+        <p>Register as Food Donor or NGO</p>
+      </div>
+    </div>
+
+    <!-- SVG lines for branching -->
+    <svg class="decision-svg-overlay" viewBox="0 0 1420 160">
+      <defs>
+        <marker id="dec-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 1 L 8 5 L 0 9 z" fill="#475569" />
+        </marker>
+      </defs>
+      <!-- Horizontal branch from Diamond right corner (805, 45) to Create Account left edge (920, 45) -->
+      <line x1="805" y1="45" x2="918" y2="45" stroke="#475569" stroke-width="2" marker-end="url(#dec-arrow)" />
+      
+      <!-- Downward branch from Diamond bottom corner (710, 77) to Dashboard top (710, 118) -->
+      <line x1="710" y1="77" x2="710" y2="116" stroke="#475569" stroke-width="2" marker-end="url(#dec-arrow)" />
+
+      <!-- Route from Create Account bottom (1065, 77) down and into Dashboard right side (950, 150) -->
+      <path d="M 1065 77 L 1065 152 L 952 152" stroke="#475569" stroke-width="2" fill="none" stroke-dasharray="4 3" marker-end="url(#dec-arrow)" />
+    </svg>
+
+    <span class="label-new-user">New User</span>
+    <span class="label-existing-user">Existing User</span>
+
+  </div>
+
+  <!-- Dashboard Node -->
+  <div class="dashboard-box">
+    <div class="box-icon dashboard-icon">
+      <svg class="icon" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+      </svg>
+    </div>
+    <div class="box-content">
+      <h3 style="color: #4c1d95;">Dashboard</h3>
+      <p style="color: #6b21a8;">View stats, active surplus meals, urgent alerts &amp; quick actions</p>
+    </div>
+  </div>
+
+  <div class="arrow-down"></div>
+
+  <!-- Access Features Node -->
+  <div class="features-access-box">
+    <div class="box-icon features-access-icon">
+      <svg class="icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </div>
+    <div class="box-content">
+      <h3 style="color: #1e40af;">Access Features</h3>
+      <p style="color: #2563eb;">Choose an operational module based on role and community need</p>
+    </div>
+  </div>
+
+  <!-- Distribution Tree Bus Lines -->
+  <svg class="distribution-svg" viewBox="0 0 1420 44">
+    <defs>
+      <marker id="bus-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M 0 1 L 8 5 L 0 9 z" fill="#475569" />
+      </marker>
+    </defs>
+    <!-- Center drop from Access Features -->
+    <line x1="710" y1="0" x2="710" y2="20" stroke="#475569" stroke-width="2" />
+    <!-- Horizontal distribution bar -->
+    <line x1="119" y1="20" x2="1301" y2="20" stroke="#475569" stroke-width="2" />
+    <!-- 7 vertical drops with arrowheads into cards -->
+    <line x1="119" y1="20" x2="119" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#bus-arrow)" />
+    <line x1="316" y1="20" x2="316" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#bus-arrow)" />
+    <line x1="513" y1="20" x2="513" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#bus-arrow)" />
+    <line x1="710" y1="20" x2="710" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#bus-arrow)" />
+    <line x1="907" y1="20" x2="907" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#bus-arrow)" />
+    <line x1="1104" y1="20" x2="1104" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#bus-arrow)" />
+    <line x1="1301" y1="20" x2="1301" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#bus-arrow)" />
+  </svg>
+
+  <!-- 7 Feature Cards Grid -->
+  <div class="cards-grid">
+
+    <!-- Card 1: Donor Portal (Pink) -->
+    <div class="module-card card-donor">
+      <div class="module-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+      <div class="module-title">Donor Portal</div>
+      <ul class="module-bullets">
+        <li><span class="bullet-dot"></span>Post surplus meals</li>
+        <li><span class="bullet-dot"></span>Set category &amp; servings</li>
+        <li><span class="bullet-dot"></span>Define expiry window</li>
+        <li><span class="bullet-dot"></span>Live pickup tracker</li>
+      </ul>
+    </div>
+
+    <!-- Card 2: NGO Claim Center (Blue) -->
+    <div class="module-card card-ngo">
+      <div class="module-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+      <div class="module-title">NGO Claim Center</div>
+      <ul class="module-bullets">
+        <li><span class="bullet-dot"></span>Browse surplus feed</li>
+        <li><span class="bullet-dot"></span>1-Click batch claim</li>
+        <li><span class="bullet-dot"></span>Vehicle &amp; pickup info</li>
+        <li><span class="bullet-dot"></span>Volunteer dispatch</li>
+      </ul>
+    </div>
+
+    <!-- Card 3: Urgency Classifier (Green) -->
+    <div class="module-card card-urgency">
+      <div class="module-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <div class="module-title">Urgency Classifier</div>
+      <ul class="module-bullets">
+        <li><span class="bullet-dot"></span>Live expiry timer</li>
+        <li><span class="bullet-dot"></span>&lt;2h urgent alerts</li>
+        <li><span class="bullet-dot"></span>Priority feed badge</li>
+        <li><span class="bullet-dot"></span>Spoilage prevention</li>
+      </ul>
+    </div>
+
+    <!-- Card 4: Rescue Lifecycle (Yellow) -->
+    <div class="module-card card-lifecycle">
+      <div class="module-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+      </div>
+      <div class="module-title">Rescue Lifecycle</div>
+      <ul class="module-bullets">
+        <li><span class="bullet-dot"></span>4-Stage state machine</li>
+        <li><span class="bullet-dot"></span>Available &rarr; Claimed</li>
+        <li><span class="bullet-dot"></span>Picked Up &rarr; Done</li>
+        <li><span class="bullet-dot"></span>Atomic status lock</li>
+      </ul>
+    </div>
+
+    <!-- Card 5: Admin & Audit Hub (Purple) -->
+    <div class="module-card card-admin">
+      <div class="module-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      </div>
+      <div class="module-title">Admin Oversight</div>
+      <ul class="module-bullets">
+        <li><span class="bullet-dot"></span>Platform statistics</li>
+        <li><span class="bullet-dot"></span>User role control</li>
+        <li><span class="bullet-dot"></span>Manual overrides</li>
+        <li><span class="bullet-dot"></span>Immutable audit log</li>
+      </ul>
+    </div>
+
+    <!-- Card 6: Impact Analytics (Cyan) -->
+    <div class="module-card card-analytics">
+      <div class="module-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+      </div>
+      <div class="module-title">Impact Analytics</div>
+      <ul class="module-bullets">
+        <li><span class="bullet-dot"></span>Total meals rescued</li>
+        <li><span class="bullet-dot"></span>Food waste saved (kg)</li>
+        <li><span class="bullet-dot"></span>CO₂ averted (kg)</li>
+        <li><span class="bullet-dot"></span>SDG 2 &amp; 12 metrics</li>
+      </ul>
+    </div>
+
+    <!-- Card 7: Backend & API (Magenta) -->
+    <div class="module-card card-backend">
+      <div class="module-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+      </div>
+      <div class="module-title">Backend API</div>
+      <ul class="module-bullets">
+        <li><span class="bullet-dot"></span>Kotlin / JVM server</li>
+        <li><span class="bullet-dot"></span>RESTful endpoints</li>
+        <li><span class="bullet-dot"></span>SQLite transactions</li>
+        <li><span class="bullet-dot"></span>JWT stateless auth</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Convergence SVG Lines -->
+  <svg class="convergence-svg" viewBox="0 0 1420 44">
+    <defs>
+      <marker id="conv-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M 0 1 L 8 5 L 0 9 z" fill="#475569" />
+      </marker>
+    </defs>
+    <!-- 7 vertical drops from cards into bus line -->
+    <line x1="119" y1="0" x2="119" y2="20" stroke="#475569" stroke-width="2" />
+    <line x1="316" y1="0" x2="316" y2="20" stroke="#475569" stroke-width="2" />
+    <line x1="513" y1="0" x2="513" y2="20" stroke="#475569" stroke-width="2" />
+    <line x1="710" y1="0" x2="710" y2="20" stroke="#475569" stroke-width="2" />
+    <line x1="907" y1="0" x2="907" y2="20" stroke="#475569" stroke-width="2" />
+    <line x1="1104" y1="0" x2="1104" y2="20" stroke="#475569" stroke-width="2" />
+    <line x1="1301" y1="0" x2="1301" y2="20" stroke="#475569" stroke-width="2" />
+    <!-- Horizontal collector bar -->
+    <line x1="119" y1="20" x2="1301" y2="20" stroke="#475569" stroke-width="2" />
+    <!-- Center drop into storage box -->
+    <line x1="710" y1="20" x2="710" y2="42" stroke="#475569" stroke-width="2" marker-end="url(#conv-arrow)" />
+  </svg>
+
+  <!-- Data Storage & Synchronization Box -->
+  <div class="storage-box">
+    <div class="storage-icon">
+      <svg class="icon" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
+        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+      </svg>
+    </div>
+    <div class="storage-content">
+      <h3>Data Storage &amp; Synchronization</h3>
+      <p>Store and sync users, surplus donations, claims, audit logs &amp; sustainability metrics</p>
+      <div class="storage-sub">(Relational SQLite Database &bull; foodshare.db + Kotlin REST API + JWT Authentication)</div>
+    </div>
+  </div>
+
+  <div class="arrow-down"></div>
+
+  <!-- End Node -->
+  <div class="end-pill">
+    <div class="end-icon">
+      <svg class="icon" viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+        <line x1="4" y1="22" x2="4" y2="15"></line>
+      </svg>
+    </div>
+    <div class="end-content">
+      <h3>End</h3>
+      <p>Zero Food Waste &bull; Rescuing surplus &amp; nourishing communities anytime, anywhere.</p>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
+`;
+
+fs.writeFileSync(path.join(__dirname, 'foodshare_workflow_flowchart.html'), htmlContent, 'utf8');
+console.log('HTML file created successfully!');
+
+async function renderImage() {
+  const browser = await puppeteer.launch({
+    executablePath: 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe',
+    headless: true,
+    pipe: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1480, height: 1160, deviceScaleFactor: 2 });
+  
+  const filePath = 'file:///' + path.join(__dirname, 'foodshare_workflow_flowchart.html').replace(/\\\\/g, '/');
+  await page.goto(filePath, { waitUntil: 'networkidle0' });
+
+  // Make sure fonts are loaded
+  await page.evaluateHandle('document.fonts.ready');
+
+  // Select canvas element
+  const canvas = await page.$('.canvas');
+  
+  const pptAssetsDir = path.join(__dirname, 'ppt_assets');
+  if (!fs.existsSync(pptAssetsDir)) fs.mkdirSync(pptAssetsDir, { recursive: true });
+
+  const outPpt = path.join(pptAssetsDir, '11_System_Workflow_Flowchart.png');
+  const outRoot = path.join(__dirname, 'foodshare_workflow_flowchart.png');
+
+  await canvas.screenshot({ path: outPpt });
+  console.log('Saved to:', outPpt);
+
+  await canvas.screenshot({ path: outRoot });
+  console.log('Saved to:', outRoot);
+
+  await browser.close();
+}
+
+renderImage().catch(console.error);
